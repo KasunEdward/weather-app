@@ -1,6 +1,6 @@
 "use client";
 import { ChangeEvent, useState } from "react";
-import { getCurrentWeather, getLocationCoordinates, getLocationFromText, getWeatherFromCoordinates } from "./actions/weather";
+import { getCurrentWeather, getLocationCoordinates, getLocationFromText} from "./actions/weather";
 import { convertKelvinToCelcius } from "./utils/weatherUtil";
 
 export default function Home() {
