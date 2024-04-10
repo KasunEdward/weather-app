@@ -11,8 +11,8 @@ export async function getLocationFromText(requestText: string) {
       messages: [{ role: "user", content: requestText }],
       functions: [
         {
-          name: "displayData",
-          description: "Get the current weather in a given location.",
+          name: "locationFromText",
+          description: "Get the location from text",
           parameters: {
             type: "object",
             properties: {
@@ -111,4 +111,45 @@ export async function getCurrentWeather(lat: number, lon: number) {
     const weatherRes = openAIResponse?.data?.list[0];
     return weatherRes;
   } catch (error) {}
+}
+
+export async function getRecommendation(prompt: string, weatherData: any) {
+  try {
+    const url = "https://api.openai.com/v1/chat/completions";
+
+    const sysMsg = `In a conversational professional tone, answer the [Question] based on the [Weather Data]. 
+
+- Provide an opinion about what the weather feels like. 
+- Provide temperature in either Celsius or Fahrenheit, whichever is more appropriate. 
+- Never display the temperature in Kelvin. 
+- Provide a recommendation on how to prepare and what to wear (e.g. bring an umbrella, wear a wind breaker, a warm jacket, etc.)`;
+
+    const newPrompt = `Question: ${prompt}. Weather Data: ${JSON.stringify(
+      weatherData
+    )}`;
+    const data = {
+      model: "gpt-4",
+      messages: [
+        { role: "system", content: sysMsg },
+        { role: "user", content: newPrompt },
+      ],
+    };
+    let config = {
+      method: "post",
+      maxBodyLength: Infinity,
+      url: "https://api.openai.com/v1/chat/completions",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
+      },
+      data: data,
+    };
+
+    const openAIResponse = await axios.request(config);
+    console.log(openAIResponse);
+    return openAIResponse.data.choices[0].message.content;
+  } catch (error) {
+    console.log("Error:", error);
+    return error;
+  }
 }

@@ -1,33 +1,71 @@
 "use client";
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import {
   getCurrentWeather,
   getLocationCoordinates,
   getLocationFromText,
+  getRecommendation,
 } from "./actions/weather";
 import { convertKelvinToCelcius } from "./utils/weatherUtil";
+import LoadingSpinner from "./components/LoadingSpinner";
 
 export default function Home() {
   const [data, setData] = useState<any>(null);
   const [requestText, setRequestText] = useState<string>("");
+  const [recommendation, setRecommendation] = useState<string>("");
+  const [dataLoading, setDataLoading] = useState<boolean>(false);
+  const [recommendationLoading, setRecommendationLoading] =
+    useState<boolean>(false);
+
+  useEffect(() => {
+    const getWeatherRecommendation = async () => {
+      try {
+        setRecommendationLoading(true);
+        const resp = await getRecommendation(requestText, data);
+        setRecommendation(resp);
+      } catch (error) {
+        console.log(error);
+      } finally {
+        setRecommendationLoading(false);
+      }
+    };
+
+    if (requestText && data) {
+      getWeatherRecommendation();
+    }
+  }, [requestText, data]);
 
   const getWeatherData = async () => {
-    const locationResponse = await getLocationFromText(requestText);
-    console.log(locationResponse);
+    try {
+      setDataLoading(true);
+      const locationResponse = await getLocationFromText(requestText);
+      console.log(locationResponse);
 
-    const { countryCode, city } = locationResponse;
+      const { countryCode, city } = locationResponse;
 
-    const coordinatesResponse = await getLocationCoordinates(countryCode, city);
+      const coordinatesResponse = await getLocationCoordinates(
+        countryCode,
+        city
+      );
 
-    const weatherResponse = await getCurrentWeather(
-      coordinatesResponse?.lat,
-      coordinatesResponse?.lon
-    );
+      const weatherResponse = await getCurrentWeather(
+        coordinatesResponse?.lat,
+        coordinatesResponse?.lon
+      );
 
-    setData(weatherResponse);
+      setData(weatherResponse);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setDataLoading(false);
+    }
   };
 
   const handleChangeRequestText = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    if (recommendation) {
+      setRecommendation("");
+      setData(null);
+    }
     setRequestText(e.target.value);
   };
 
@@ -53,25 +91,34 @@ export default function Home() {
       <div className="flex flex-col md:flex-row gap-4 items-center w-screen p-4">
         <div className="grid grid-cols-2 gap-4 w-screen rounded p-4 overflow-hidden shadow-lg">
           <div>
-            <p className="text-2xl text-slate-400">Now</p>
+            <p className="text-2xl text-slate-400">Prediction</p>
             <p className="text-3xl text-slate-100">
               {data ? `${convertKelvinToCelcius(data?.main?.temp)} C` : ""}
             </p>
           </div>
           <div>
+            {dataLoading && <LoadingSpinner />}
             {data && (
-               <p className="text-slate-200">{`${data?.weather[0].main} (${data?.weather[0].description})`}</p>
-            )}  
-            <p className="text-slate-200">{`Humidity: ${data ? data?.main.humidity : ""} ${
-              data ? "%" : ""
-            }`}</p>
-            <p className="text-slate-200">{`Wind: ${data ? data?.wind.speed : ""} ${
-              data ? "km/h" : ""
-            }`}</p>
+              <>
+                <p className="text-slate-200">{`${data?.weather[0].main} (${data?.weather[0].description})`}</p>
+                <p className="text-slate-200">{`Humidity: ${
+                  data ? data?.main.humidity : ""
+                } ${data ? "%" : ""}`}</p>
+                <p className="text-slate-200">{`Wind: ${
+                  data ? data?.wind.speed : ""
+                } ${data ? "km/h" : ""}`}</p>
+              </>
+            )}
           </div>
         </div>
         <div className="flex flex-col w-screen rounded overflow-hidden p-4 text-slate-400 shadow-lg">
-          <p>AI suggestion: WIP</p>
+          <p className="text-2xl text-slate-400">AI suggestion</p>
+          {recommendationLoading && (
+            <div className="text-center p-4">
+              <LoadingSpinner />
+            </div>
+          )}
+          <p>{`${recommendation}`}</p>
         </div>
       </div>
     </div>
